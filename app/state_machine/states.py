@@ -1,25 +1,20 @@
+# JamieBot/app/state_machine/states.py
 from enum import Enum
-
 
 class ConversationState(str, Enum):
     """
     All valid conversation states for the AI Setter.
     """
-
     ENTRY = "ENTRY"
     RAPPORT = "RAPPORT"
     PROBLEM_DISCOVERY = "PROBLEM_DISCOVERY"
     COACHING_TRANSITION = "COACHING_TRANSITION"
-
     QUAL_LOCATION = "QUAL_LOCATION"
     QUAL_RELATIONSHIP_GOAL = "QUAL_RELATIONSHIP_GOAL"
     QUAL_FITNESS = "QUAL_FITNESS"
     QUAL_FINANCE = "QUAL_FINANCE"
-
     ROUTE_HIGH_TICKET = "ROUTE_HIGH_TICKET"
     ROUTE_LOW_TICKET = "ROUTE_LOW_TICKET"
-
     FOLLOW_UP_10_MIN = "FOLLOW_UP_10_MIN"
     FOLLOW_UP_24_HOUR = "FOLLOW_UP_24_HOUR"
-
     END = "END"

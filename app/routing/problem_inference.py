@@ -1,7 +1,5 @@
-# app/routing/problem_inference.py
-
+# JamieBot/app/routing/problem_inference.py
 from enum import Enum
-
 
 class ProblemTag(str, Enum):
     TEXTING = "TEXTING"
@@ -12,10 +10,7 @@ class ProblemTag(str, Enum):
     CONFIDENCE = "CONFIDENCE"
     GENERAL = "GENERAL"
 
-
-###############################     
-##### Keyword Signals#########
-##############################
+# Keyword Signals
 
 TEXTING_KEYWORDS = {
     "texting",
@@ -75,37 +70,29 @@ CONFIDENCE_KEYWORDS = {
     "lost",
 }
 
-
-#########################################
-######## Inference Function ##############
-#########################################
-
-from typing import List
-from app.routing.problem_inference import ProblemTag
-
-
+# Inference Function
 def infer_problem_tag(text: str) -> ProblemTag:
     """
     Infers the primary dating problem from normalized user text.
     Returns exactly ONE ProblemTag.
     """
-
+    
     if any(k in text for k in TEXTING_KEYWORDS):
         return ProblemTag.TEXTING
-
+    
     if any(k in text for k in MATCHES_KEYWORDS):
         return ProblemTag.MATCHES
-
+    
     if any(k in text for k in APPROACH_KEYWORDS):
         return ProblemTag.APPROACH
-
+    
     if any(k in text for k in SPARK_KEYWORDS):
         return ProblemTag.SPARK
-
+    
     if any(k in text for k in ESCALATION_KEYWORDS):
         return ProblemTag.ESCALATION
-
+    
     if any(k in text for k in CONFIDENCE_KEYWORDS):
         return ProblemTag.CONFIDENCE
-
+    
     return ProblemTag.GENERAL

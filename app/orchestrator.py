@@ -1,3 +1,4 @@
+# JamieBot/app/orchestrator.py
 from typing import Dict, Optional
 
 from app.state_machine.states import ConversationState
@@ -7,12 +8,9 @@ from app.validators.length_check import validate_length
 from app.validators.question_check import validate_question_count
 from app.validators.safety_check import validate_safety
 
-
-from app.routing.problem_inference import infer_problem_tag
-from app.routing.product_catalog import get_product_for_problem
-from app.state_machine.states import ConversationState
 from app.state_machine.exit_rules import normalize_text
 from app.routing.problem_inference import infer_problem_tag, ProblemTag
+from app.routing.product_catalog import get_product_for_problem
 
 
 class Orchestrator:
@@ -40,6 +38,37 @@ class Orchestrator:
         """
         Main orchestration function.
         """
+        if extracted_attributes is None:
+            extracted_attributes = {}
+
+        # =================================================
+        # 🧠 SEMANTIC EXTRACTION (The "Solid" Fix)
+        # =================================================
+        
+        # 1. Location Extraction
+        if current_state == ConversationState.QUAL_LOCATION:
+            loc = self.llm_service.extract_attribute(user_message, "location")
+            if loc: extracted_attributes["location_region"] = loc
+
+        # 2. Relationship Extraction
+        elif current_state == ConversationState.QUAL_RELATIONSHIP_GOAL:
+            goal = self.llm_service.extract_attribute(user_message, "relationship_goal")
+            if goal: extracted_attributes["relationship_goal"] = goal
+
+        # 3. Fitness Extraction
+        elif current_state == ConversationState.QUAL_FITNESS:
+            fit = self.llm_service.extract_attribute(user_message, "fitness")
+            if fit: extracted_attributes["fitness_level"] = fit
+
+        # 4. Finance Extraction
+        elif current_state == ConversationState.QUAL_FINANCE:
+            fin = self.llm_service.extract_attribute(user_message, "finance")
+            if fin: 
+                extracted_attributes["financial_bucket"] = fin.lower() # transitions expects "low" or "high"
+
+        # =================================================
+        # END EXTRACTION
+        # =================================================
 
         # 1️⃣ Determine next state (deterministic)
         next_state = determine_next_state(
@@ -51,17 +80,16 @@ class Orchestrator:
         # ================================
         # 🧠 STORE PRIMARY PROBLEM (ONCE)
         # ================================
-        if extracted_attributes is not None:
-            if "primary_problem" not in extracted_attributes:
-                if current_state in {
-                    ConversationState.PROBLEM_DISCOVERY,
-                    ConversationState.COACHING_TRANSITION,
-                }:
-                    normalized = normalize_text(user_message)
-                    inferred_problem = infer_problem_tag(normalized)
+        if "primary_problem" not in extracted_attributes:
+            if current_state in {
+                ConversationState.PROBLEM_DISCOVERY,
+                ConversationState.COACHING_TRANSITION,
+            }:
+                normalized = normalize_text(user_message)
+                inferred_problem = infer_problem_tag(normalized)
 
-                    if inferred_problem != ProblemTag.GENERAL:
-                        extracted_attributes["primary_problem"] = inferred_problem
+                if inferred_problem != ProblemTag.GENERAL:
+                    extracted_attributes["primary_problem"] = inferred_problem
 
         # ================================
         #  STEP 4: ROUTE_HIGH_TICKET
@@ -69,10 +97,19 @@ class Orchestrator:
         if next_state == ConversationState.ROUTE_HIGH_TICKET:
             normalized = normalize_text(user_message)
 
-            problem_tag = extracted_attributes.get(
-                "primary_problem",
-                infer_problem_tag(normalized)
-            )
+            # Retrieve raw value
+            raw_tag = extracted_attributes.get("primary_problem")
+            
+            # FIX: Ensure we have a ProblemTag Enum, not a string
+            if isinstance(raw_tag, str):
+                try:
+                    problem_tag = ProblemTag(raw_tag)
+                except ValueError:
+                    problem_tag = ProblemTag.GENERAL
+            elif raw_tag:
+                problem_tag = raw_tag
+            else:
+                problem_tag = infer_problem_tag(normalized)
 
             product = get_product_for_problem(problem_tag)
 
@@ -107,9 +144,6 @@ class Orchestrator:
 
 
         # 2️⃣ Load prompts
-        # system_prompt = self._load_prompt("system.txt")
-        # state_prompt = self._load_prompt(f"{next_state.value.lower()}.txt")
-
         # If conversation has ended, return cleanly
         if next_state == ConversationState.END:
             return {
@@ -120,10 +154,6 @@ class Orchestrator:
         # Otherwise, continue normally
         system_prompt = self._load_prompt("system.txt")
         state_prompt = self._load_prompt(f"{next_state.value.lower()}.txt")
-
-        # print("\n===== ENTRY PROMPT ACTUALLY LOADED =====\n")
-        # print(state_prompt)
-        # print("\n=======================================\n")
 
         # 3️⃣ Generate response (retry up to 2 times)
         attempts = 0
@@ -152,4 +182,5 @@ class Orchestrator:
         return {
             "reply": response_text,
             "next_state": next_state.value,
+            "extracted_attributes": extracted_attributes,
         }

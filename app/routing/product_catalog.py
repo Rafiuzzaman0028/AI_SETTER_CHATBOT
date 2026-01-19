@@ -1,9 +1,7 @@
-# app/routing/product_catalog.py
-
+# JamieBot/app/routing/product_catalog.py
 from dataclasses import dataclass
 from typing import Optional
 from app.routing.problem_inference import ProblemTag
-
 
 @dataclass(frozen=True)
 class Product:
@@ -13,12 +11,7 @@ class Product:
     price: Optional[str]
     problem_tag: ProblemTag
 
-
-###############################################
-######## Encoding of Product Catalog ##########
-###############################################
-
-# app/routing/product_catalog.py
+# Encoding of Product Catalog 
 
 PRODUCTS = [
     Product(
@@ -65,9 +58,7 @@ PRODUCTS = [
     ),
 ]
 
-##########################
-### Default/fallback product
-
+# Default/fallback product
 DEFAULT_PRODUCT = Product(
     id="general_dating_guide",
     name="How to Make Online Dating Suck Less",
@@ -76,16 +67,9 @@ DEFAULT_PRODUCT = Product(
     problem_tag=ProblemTag.GENERAL,
 )
 
+PRODUCT_BY_PROBLEM = {product.problem_tag: product for product in PRODUCTS}
 
-# app/routing/product_catalog.py
-
-PRODUCT_BY_PROBLEM = {
-    product.problem_tag: product for product in PRODUCTS
-}
-
-
-### Helper ###
-
+# Helper 
 def get_product_for_problem(problem_tag: ProblemTag) -> Product:
     """
     Returns the best product for the given problem tag.
