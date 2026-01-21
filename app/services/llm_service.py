@@ -26,7 +26,7 @@ class LLMService:
         )
         # ---- GENERATION PARAMS ----
         self.brain_temperature = 0.2
-        self.voice_temperature = 0.5
+        self.voice_temperature = 0.6
         self.max_output_tokens = 120
         # Feature flag (IMPORTANT)
         self.use_voice_model = True
@@ -93,6 +93,8 @@ class LLMService:
                         "text": (
                             "Rewrite the following message naturally, "
                             "as Jamie — calm, grounded, human. "
+                            "NO DASHES (—) or hyphens (-). Use '...' or commas instead.\n"
+                            "Make it sound like a real text message (relaxed grammar is okay).\n"
                             "Do not add new ideas. "
                             "Do not add extra questions.keep it concise\n\n"
                             f"{draft_text}"
