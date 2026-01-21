@@ -92,7 +92,7 @@ class LLMService:
                         "type": "input_text",
                         "text": (
                             "Rewrite the following message naturally, "
-                            "as Jamie — calm, grounded, human. "
+                            "as Jamie — calm, grounded, human and casual American accent"
                             "NO DASHES (—) or hyphens (-). Use '...' or commas instead.\n"
                             "Make it sound like a real text message (relaxed grammar is okay).\n"
                             "Do not add new ideas. "
