@@ -2,193 +2,107 @@
 from typing import Dict, Optional
 from app.state_machine.states import ConversationState
 from app.state_machine.exit_rules import (
-    normalize_text, should_exit_entry,
-    should_exit_rapport,
-    entry_boundary_action, is_stall_response, has_concrete_detail,
-    is_problem_signal, confirms_pattern, seeks_help, expresses_exhaustion, 
-    gives_permission, declines_permission, has_specific_scenario
+    normalize_text, entry_boundary_action, should_exit_entry
 )
 
-def determine_next_state(
-    current_state: ConversationState,
-    user_message: str,
-    extracted_attributes: Optional[Dict[str, str]] = None,
-) -> ConversationState:
-    """
-    Determines the next conversation state based on
-    the current state and extracted user attributes.
-    """
+def determine_next_state(current_state, user_message, extracted_attributes=None):
+    if extracted_attributes is None: extracted_attributes = {}
+    turns = extracted_attributes.get("current_state_turn_count", 0)
+    normalized = normalize_text(user_message)
 
-    if extracted_attributes is None :
-        extracted_attributes = {}
-    
-    # -------------------------
-    # ENTRY STATE
-    # -------------------------
+    # ENTRY (User said "Hi")
     if current_state == ConversationState.ENTRY:
-        normalized = normalize_text(user_message)
-        
-        extracted_attributes["abuse_count"] = int(extracted_attributes.get("abuse_count", 0))
-        
         action = entry_boundary_action(normalized, extracted_attributes)
-        if action == "HARD_STOP":
-            return ConversationState.END
+        if action == "HARD_STOP": return ConversationState.END
+        if action == "WARN_ABUSE": return ConversationState.ENTRY
         
-        if action == "WARN_ABUSE":
-            return ConversationState.ENTRY
-        
+        # EDGE CASE: If user skips pleasantries and immediately talks dating 
+        # (e.g., "I need help with a girl"), go straight to business.
         if should_exit_entry(normalized):
-            return ConversationState.RAPPORT
+            return ConversationState.STAGE_1_PATTERN
         
+        # LOGIC FIX:
+        # If this is the FIRST message (turn 0), stay in ENTRY so we can ask "How is your day?"
+        # If this is the SECOND message (turn >= 1), move to ENTRY_SOCIAL.
+        if turns >= 1:
+            return ConversationState.ENTRY_SOCIAL
+            
         return ConversationState.ENTRY
     
     # -------------------------
-    # RAPPORT STATE 
+    # 2. ENTRY SOCIAL (User said "My day is good/bad")
     # -------------------------
-    if current_state == ConversationState.RAPPORT:
-        normalized = normalize_text(user_message)
-        
-        if seeks_help(normalized):
-            return ConversationState.PROBLEM_DISCOVERY
-        
-        stall_count = int(extracted_attributes.get("stall_count", 0))
-        
-        if is_stall_response(normalized):
-            stall_count += 1
-            extracted_attributes["stall_count"] = stall_count
-        elif has_concrete_detail(normalized):
-            extracted_attributes["stall_count"] = 0
-        
-        if should_exit_rapport(normalized):
-            return ConversationState.PROBLEM_DISCOVERY
-        
-        return ConversationState.RAPPORT
-    
-    # -------------------------
-    # PROBLEM DISCOVERY STATE 
-    # -------------------------
-    if current_state == ConversationState.PROBLEM_DISCOVERY:
-        normalized = normalize_text(user_message)
-        
-        # 1. NEW: Check for "Stall" or "I don't know"
-        # In this state, "I don't know" means "I need your help." -> Exit.
-        if is_stall_response(normalized):
-            return ConversationState.COACHING_TRANSITION
+    if current_state == ConversationState.ENTRY_SOCIAL:
+        # The user just answered "Good/Bad". 
+        # We accept any answer and immediately move to Stage 1 to start the funnel.
+        return ConversationState.STAGE_1_PATTERN
+    # --- THE LINEAR FUNNEL (SPEED FIX) ---
+    # STAGE 1: PATTERN 
+    # FIX: Moved from 2 turns to 1 turn. Move immediately if they answer.
+    if current_state == ConversationState.STAGE_1_PATTERN:
+        if turns >= 2: 
+            return ConversationState.STAGE_2_TIME_COST
+        return ConversationState.STAGE_1_PATTERN
 
-        # 2. Check for Specific Scenarios
-        if has_specific_scenario(normalized):
-            return ConversationState.COACHING_TRANSITION
+    # STAGE 2 -> 3
+    if current_state == ConversationState.STAGE_2_TIME_COST:
+        return ConversationState.STAGE_3_ADDITIONAL
 
-        # Initialize memory
-        signal_count = extracted_attributes.get("problem_signal_count", 0)
-        confirmed = extracted_attributes.get("problem_confirmed", False)
-        
-        # Signal detection
-        if is_problem_signal(normalized):
-            signal_count += 1
-            extracted_attributes["problem_signal_count"] = signal_count
-        
-        # Confirmation
-        if confirms_pattern(normalized) or signal_count >= 2:
-            extracted_attributes["problem_confirmed"] = True
-            confirmed = True
-        
-        # Exit conditions
-        if seeks_help(normalized) or expresses_exhaustion(normalized):
-            return ConversationState.COACHING_TRANSITION
-        
-        #  CONVERGENCE ENFORCEMENT
-        if confirmed:
-            return ConversationState.PROBLEM_DISCOVERY 
-        
-        return ConversationState.PROBLEM_DISCOVERY
-    
-    # -------------------------
-    # COACHING TRANSITION STATE 
-    # -------------------------
-    if current_state == ConversationState.COACHING_TRANSITION:
-        normalized = normalize_text(user_message)
-        # User gives permission → begin qualification
-        if gives_permission(normalized):
-            return ConversationState.QUAL_LOCATION
-        
-        # User declines or hesitates → stay here, do not push
-        if declines_permission(normalized):
-            return ConversationState.COACHING_TRANSITION
-        
-        # Default: hold and wait
-        return ConversationState.COACHING_TRANSITION
-    
-    # -------------------------
-    # QUAL LOCATION STATE (Updated for Semantic Extraction)
-    # -------------------------
-    if current_state == ConversationState.QUAL_LOCATION:
-        # Check if Orchestrator successfully extracted a region using AI
+    # STAGE 3 -> 4
+    if current_state == ConversationState.STAGE_3_ADDITIONAL:
+        return ConversationState.STAGE_4_FAILED_SOLUTIONS
+
+    # STAGE 4 -> 5
+    if current_state == ConversationState.STAGE_4_FAILED_SOLUTIONS:
+        return ConversationState.STAGE_5_GOAL
+
+    # STAGE 5 -> 6
+    if current_state == ConversationState.STAGE_5_GOAL:
+        return ConversationState.STAGE_6_GAP
+
+    # STAGE 6 -> 7
+    if current_state == ConversationState.STAGE_6_GAP:
+        return ConversationState.STAGE_7_REFRAME
+
+    # STAGE 7 -> 8
+    if current_state == ConversationState.STAGE_7_REFRAME:
+        return ConversationState.STAGE_8_INTRO_COACHING
+
+    # STAGE 8 -> 9 (CRITICAL FIX)
+    if current_state == ConversationState.STAGE_8_INTRO_COACHING:
+        # We move to Stage 9 regardless of YES or NO.
+        # The Stage 9 PROMPT must handle the "No".
+        return ConversationState.STAGE_9_PROGRAM_FRAMING
+
+    # STAGE 9 -> 10
+    if current_state == ConversationState.STAGE_9_PROGRAM_FRAMING:
+        return ConversationState.STAGE_10_QUAL_LOCATION
+
+    # --- QUALIFICATION FILTERS ---
+    if current_state == ConversationState.STAGE_10_QUAL_LOCATION:
         region = extracted_attributes.get("location_region")
-        
-        if region in {"US", "CANADA", "EU"}:
-            return ConversationState.QUAL_RELATIONSHIP_GOAL
-        
-        if region == "OTHER":
-            return ConversationState.ROUTE_LOW_TICKET
-            
-        # If None/Unknown, stay and ask again
-        return ConversationState.QUAL_LOCATION
-    
-    # -------------------------
-    # QUAL RELATIONSHIP GOAL (Updated for Semantic Extraction)
-    # -------------------------
-    if current_state == ConversationState.QUAL_RELATIONSHIP_GOAL:
-        goal = extracted_attributes.get("relationship_goal")
-        
-        # We accept both Serious and Casual to move forward
-        if goal in {"SERIOUS", "CASUAL"}:
-            return ConversationState.QUAL_FITNESS
-            
-        return ConversationState.QUAL_RELATIONSHIP_GOAL
-    
-    # -------------------------
-    # QUAL FITNESS (Updated for Semantic Extraction)
-    # -------------------------
-    if current_state == ConversationState.QUAL_FITNESS:
-        fit = extracted_attributes.get("fitness_level")
-        
-        if fit in {"FIT", "AVERAGE"}:
-            return ConversationState.QUAL_FINANCE
-            
-        # Even if unfit, PDF logic usually says "Respect" -> move to Finance
-        if fit == "UNFIT":
-            return ConversationState.QUAL_FINANCE 
-            
-        return ConversationState.QUAL_FITNESS
-    
-    # -------------------------
-    # FINANCIAL ROUTING LOGIC (Updated for Semantic Extraction)
-    # -------------------------
-    if current_state == ConversationState.QUAL_FINANCE:
-        # If already completed in previous turn
-        if extracted_attributes.get("finance_completed"):
-            bucket = extracted_attributes.get("financial_bucket")
-            if bucket == "low":
-                return ConversationState.ROUTE_LOW_TICKET
-            return ConversationState.ROUTE_HIGH_TICKET
+        if region == "OTHER": return ConversationState.ROUTE_LOW_TICKET
+        if region in {"US", "CANADA", "EU"}: return ConversationState.STAGE_10_QUAL_AGE
+        # If unknown, ask again (only stay if absolutely necessary)
+        return ConversationState.STAGE_10_QUAL_LOCATION
 
-        bucket = extracted_attributes.get("financial_bucket") # "low" or "high"
-        
-        if bucket == "low":
-            extracted_attributes["finance_completed"] = True
-            return ConversationState.ROUTE_LOW_TICKET
-        
-        if bucket == "high":
-            extracted_attributes["finance_completed"] = True
-            return ConversationState.ROUTE_HIGH_TICKET
-            
-        return ConversationState.QUAL_FINANCE
-    
-    # -------------------------
-    # TERMINAL STATES
-    # -------------------------
+    if current_state == ConversationState.STAGE_10_QUAL_AGE:
+        return ConversationState.STAGE_10_QUAL_RELATIONSHIP
+
+    if current_state == ConversationState.STAGE_10_QUAL_RELATIONSHIP:
+        return ConversationState.STAGE_10_QUAL_FITNESS
+
+    if current_state == ConversationState.STAGE_10_QUAL_FITNESS:
+        return ConversationState.STAGE_10_QUAL_FINANCE
+
+    if current_state == ConversationState.STAGE_10_QUAL_FINANCE:
+        bucket = extracted_attributes.get("financial_bucket")
+        if bucket == "low": return ConversationState.ROUTE_LOW_TICKET
+        if bucket == "high": return ConversationState.ROUTE_HIGH_TICKET
+        return ConversationState.STAGE_10_QUAL_FINANCE
+
+    # TERMINAL
     if current_state in {ConversationState.ROUTE_HIGH_TICKET, ConversationState.ROUTE_LOW_TICKET}:
         return ConversationState.END
-    
+
     return ConversationState.END

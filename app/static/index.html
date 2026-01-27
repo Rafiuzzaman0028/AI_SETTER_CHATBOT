@@ -64,13 +64,7 @@
         <!-- Chat Area -->
         <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             <!-- Messages will appear here -->
-            <div class="flex justify-start message-enter">
-                <div
-                    class="bg-white text-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%] border border-gray-200">
-                    <p class="text-sm">Hey! I'm Jamie. Good to see you here. I'll be blunt — how's the dating life
-                        treating you?</p>
-                </div>
-            </div>
+
         </div>
 
         <!-- Typing Indicator (Hidden by default) -->
@@ -106,7 +100,10 @@
         // Since the backend is stateless, the frontend must hold the state token
         let currentState = "ENTRY";
         let userAttributes = {};
-        const userId = "client_test_" + Math.floor(Math.random() * 100000); // Random ID for unique session
+        // const userId = "client_test_" + Math.floor(Math.random() * 100000); // Random ID for unique session
+        // Now, even if you refresh, the bot will remember you.
+        // To clear memory, use the API endpoint: DELETE /clear-history/my_fixed_test_user (or just change the ID when you want a fresh start).
+        const userId = "my_fixed_test_user";
 
         const chatContainer = document.getElementById('chat-container');
         const chatForm = document.getElementById('chat-form');

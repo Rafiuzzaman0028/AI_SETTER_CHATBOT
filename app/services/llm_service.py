@@ -1,213 +1,131 @@
 # JamieBot/app/services/llm_service.py
-import os, logging
+# JamieBot/app/services/llm_service.py
+import os
+import logging
+import re
+from typing import List, Dict
 from openai import OpenAI
-from dotenv import load_dotenv
+from app.config import Config
 
-load_dotenv()
 logger = logging.getLogger(__name__)
 
 class LLMService:
-    """
-    Dual-model LLM service:
-    - Stage 1 (Brain): correctness & structure
-    - Stage 2 (Voice): human Jamie tone
-    """
     def __init__(self):
-        api_key = os.getenv("OPENAI_API_KEY")
-        
-        if not api_key:
+        if not Config.OPENAI_API_KEY:
             raise ValueError("OPENAI_API_KEY is not set")
-        self.client = OpenAI(api_key=api_key)
+        self.client = OpenAI(api_key=Config.OPENAI_API_KEY)
         
         # ---- MODELS ----
-        self.brain_model = "gpt-5.2"   # SAFE + AVAILABLE
+        self.brain_model = "gpt-5.2" # or "gpt-5.2" if you have access
         self.voice_model = (
             "ft:gpt-4o-mini-2024-07-18:jamie-date:human-chat:CIbbXDDz:ckpt-step-34"
         )
-        # ---- GENERATION PARAMS ----
         self.brain_temperature = 0.2
-        self.voice_temperature = 0.6
-        self.max_output_tokens = 120
-        # Feature flag (IMPORTANT)
+        self.voice_temperature = 0.5
+        self.max_output_tokens = 150
         self.use_voice_model = True
-    
-    # RESPONSE EXTRACTION
+
+    def _clean_formatting(self, text: str) -> str:
+        """
+        1. Strips repetitive openers.
+        2. Removes dashes.
+        3. Enforces lowercase start.
+        """
+        if not text: return ""
+        
+        # 1. Strip the overused openers
+        text = re.sub(r'^(hey|got it|sure thing|makes sense|totally)[\.,\s]+(\.\.\.)?\s*', '', text, flags=re.IGNORECASE)
+
+        # 2. Remove dashes
+        text = text.replace("—", ", ").replace(" - ", ", ")
+        
+        # 3. Enforce lowercase start
+        if text and len(text) > 0:
+            text = text[0].lower() + text[1:]
+            
+        return text.strip()
+
     def _extract_text(self, response) -> str:
+        return response.choices[0].message.content.strip()
+
+    def _prepare_response(self, system_prompt: str, state_prompt: str, user_message: str, history: List[Dict]) -> str:
         """
-        Safely extract text from OpenAI Responses API output.
-        Works with dict-based and object-based SDK outputs.
+        Injects History into the context window.
         """
-        texts = []
-        for item in response.output:
-            item_type = getattr(item, "type", None)
-            if item_type == "output_text":
-                if item.text:
-                    texts.append(item.text)
-            elif item_type == "message":
-                for content in getattr(item, "content", []):
-                    if getattr(content, "type", None) == "output_text":
-                        texts.append(content.text)
-        return " ".join(texts).strip()
-    
-    # STAGE 1 — BRAIN
-    def _prepare_response(self, system_prompt, state_prompt, user_message) -> str:
-        """
-        Uses GPT to generate a correct, helpful draft response.
-        This output is NOT shown to the user.
-        """
-        response = self.client.responses.create(
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add last 10 messages of history for context
+        # (This solves the Amnesia bug)
+        messages.extend(history[-10:])
+        
+        # Add current instructions + current message
+        final_prompt = f"{state_prompt}\n\n[CURRENT USER MESSAGE]:\n{user_message}"
+        messages.append({"role": "user", "content": final_prompt})
+
+        response = self.client.chat.completions.create(
             model=self.brain_model,
             temperature=self.brain_temperature,
-            max_output_tokens=self.max_output_tokens,
-            input=[
-                {
-                    "role": "system",
-                    "content": [{"type": "input_text", "text": system_prompt}],
-                },
-                {
-                    "role": "user",
-                    "content": [{
-                        "type": "input_text",
-                        "text": f"{state_prompt}\n\nUser message:\n{user_message}",
-                    }],
-                },
-            ],
+            max_completion_tokens=self.max_output_tokens,
+            messages=messages
         )
         return self._extract_text(response)
-    
-    # STAGE 2 — VOICE
+
     def _rewrite_human_tone(self, draft_text: str) -> str:
-        """
-        Uses the fine-tuned model to rewrite text in a natural human tone.
-        No system prompt — tone is learned from fine-tuning.
-        """
-        response = self.client.responses.create(
+        style_prompt = (
+            "Rewrite the following message as Jamie.\n"
+            "Persona: Supportive older sister. Casual American vibe.\n"
+            "STRICT FORMATTING RULES:\n"
+            "1. NO DASHES (—) or hyphens (-). Use '...' or commas instead.\n"
+            "2. Make it sound like a real text message.\n"
+            "3. Do not answer questions not present in the draft.\n"
+            "4. Do not add philosophical thoughts.\n"
+            "5. End with the exact same question found in the draft (if any).\n\n"
+            f"Draft to rewrite: \"{draft_text}\""
+        )
+        response = self.client.chat.completions.create(
             model=self.voice_model,
             temperature=self.voice_temperature,
-            max_output_tokens=self.max_output_tokens,
-            input=[
-                {
-                    "role": "user",
-                    "content": [{
-                        "type": "input_text",
-                        "text": (
-                            "Rewrite the following message naturally, "
-                            "as Jamie — calm, grounded, human and casual American accent"
-                            "NO DASHES (—) or hyphens (-). Use '...' or commas instead.\n"
-                            "Make it sound like a real text message (relaxed grammar is okay).\n"
-                            "Do not add new ideas. "
-                            "Do not add extra questions.keep it concise\n\n"
-                            f"{draft_text}"
-                        ),
-                    }],
-                },
-            ],
+            max_completion_tokens=self.max_output_tokens,
+            messages=[{"role": "user", "content": style_prompt}]
         )
         return self._extract_text(response)
-    
-    # VALIDATION
-    def _validate_final_response(self, text: str) -> bool:
-        if not text:
-            return False
+
+    # --- PUBLIC API ---
+    def generate_response(self, system_prompt: str, state_prompt: str, user_message: str, history: List[Dict]) -> str:
+        # 1. Generate Draft (With History)
+        draft = self._prepare_response(system_prompt, state_prompt, user_message, history)
         
-        if text.count("?") > 1:
-            return False
+        if not draft: return "Hmm, tell me more."
+
+        # 2. Voice Rewrite
+        if self.use_voice_model:
+            draft = self._rewrite_human_tone(draft)
         
-        if len(text.split()) > 40:
-            return False
-        
-        forbidden = [
-            "price", "cost", "buy", "sign up",
-            "guarantee", "limited", "program"
-        ]
-        
-        lower = text.lower()
-        
-        return not any(p in lower for p in forbidden)
-    
-    # PUBLIC API
-    def generate_response(self, system_prompt, state_prompt, user_message) -> str:
-        # Stage 1
-        """
-        Full two-stage generation:
-        1. GPT-4.1-mini prepares the response
-        2. Fine-tuned model rewrites it in human tone
-        """
-        
-        draft = self._prepare_response(
-            system_prompt=system_prompt,
-            state_prompt=state_prompt,
-            user_message=user_message,
-        )
-        
-        # HARD GUARD
-        if not draft:
-            return "Hmm, can you say a bit more about that?"
-        
-        # Single-model fallback
-        if not self.use_voice_model:
-            return draft
-        
-        # Stage 2
-        rewritten = self._rewrite_human_tone(draft)
-        if not self._validate_final_response(rewritten):
-            return draft
-        
-        return rewritten
-    
+        # 3. Final Cleaning
+        final_text = self._clean_formatting(draft)
+        return final_text
+
     def extract_attribute(self, text: str, attribute_type: str) -> str | None:
-        """
-        Uses LLM to classify user input into fixed categories.
-        Returns None if the user was vague/unclear.
-        """
-        
-        # Define the rules for each type
         prompts = {
-            "location": (
-                "Extract the location. "
-                "Return 'US', 'CANADA', 'EU', or 'OTHER'. "
-                "If unclear or not mentioned, return 'UNKNOWN'."
-            ),
-            "relationship_goal": (
-                "Classify the relationship goal. "
-                "Categories: 'SERIOUS' (marriage, long-term, real, partner, committed), "
-                "'CASUAL' (fun, short-term, seeing what's out there, hookup). "
-                "Return 'SERIOUS', 'CASUAL', or 'UNKNOWN'."
-            ),
-            "fitness": (
-                "Classify fitness level. "
-                "Categories: 'FIT' (gym, active, athletic, muscular, working out), "
-                "'AVERAGE' (decent, okay, normal, fine), "
-                "'UNFIT' (out of shape, overweight, no energy, lazy). "
-                "Return 'FIT', 'AVERAGE', 'UNFIT', or 'UNKNOWN'."
-            ),
-            "finance": (
-                "Classify financial status regarding coaching. "
-                "Categories: 'LOW' (broke, paycheck to paycheck, struggling, student, no money), "
-                "'HIGH' (good, doing well, comfortable, savings, invest). "
-                "Return 'LOW', 'HIGH', or 'UNKNOWN'."
-            )
+            "location": "Extract location: 'US', 'CANADA', 'EU', 'OTHER'.",
+            "relationship_goal": "Classify goal: 'SERIOUS', 'CASUAL'.",
+            "fitness": "Classify fitness: 'FIT', 'AVERAGE', 'UNFIT'.",
+            "finance": "Classify finance: 'LOW', 'HIGH'."
         }
-        
-        if attribute_type not in prompts:
-            return None
+        if attribute_type not in prompts: return None
         
         try:
             response = self.client.chat.completions.create(
-                model="gpt-5.2", # Fast and smart enough
-                temperature=0.0,     # Deterministic
+                model="gpt-4o-mini",
+                temperature=0.0,
                 messages=[
-                    {"role": "system", "content": f"You are a data extractor. {prompts[attribute_type]}"},
+                    {"role": "system", "content": f"Extractor. {prompts[attribute_type]}"},
                     {"role": "user", "content": text}
                 ]
             )
             result = response.choices[0].message.content.strip().upper()
-            
-            # Filter out UNKNOWN or garbage
-            if "UNKNOWN" in result:
-                return None
+            if "UNKNOWN" in result: return None
             return result
-            
         except Exception as e:
             logger.error(f"Extraction Error: {e}")
             return None
