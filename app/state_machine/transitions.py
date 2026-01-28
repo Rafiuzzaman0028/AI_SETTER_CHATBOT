@@ -99,10 +99,13 @@ def determine_next_state(current_state, user_message, extracted_attributes=None)
         bucket = extracted_attributes.get("financial_bucket")
         if bucket == "low": return ConversationState.ROUTE_LOW_TICKET
         if bucket == "high": return ConversationState.ROUTE_HIGH_TICKET
+        
+        # NEW SAFETY: If the user answered but extraction failed (returned None), 
+        # we shouldn't ask again forever.
+        # If text length > 5, assume they answered something valid and default to HIGH (assume innocent until proven broke).
+        if len(user_message) > 5:
+            # Default to High Ticket to be safe, or ask a clarifying question. 
+            # For a "dumb script", default to High Ticket.
+            return ConversationState.ROUTE_HIGH_TICKET
+        
         return ConversationState.STAGE_10_QUAL_FINANCE
-
-    # TERMINAL
-    if current_state in {ConversationState.ROUTE_HIGH_TICKET, ConversationState.ROUTE_LOW_TICKET}:
-        return ConversationState.END
-
-    return ConversationState.END
