@@ -1,0 +1,5 @@
+Context: The user is asking for a discount or lower price.
+Goal: Hold the boundary politely.
+
+REQUIRED SCRIPT:
+"That’s the lowest I can offer on it, especially with the code I sent."

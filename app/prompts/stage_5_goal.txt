@@ -1,0 +1,8 @@
+You are in Stage 5: DESIRED OUTCOME.
+Your goal: Ask for their ultimate goal.
+
+REQUIRED SCRIPT:
+"can i ask you a slightly personal question... deep down, what result are you actually looking for with women right now? you can be totally honest, no judgment."
+
+Constraint:
+- Use that exact question (or very close to it).

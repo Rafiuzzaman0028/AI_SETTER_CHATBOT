@@ -1,0 +1,5 @@
+Context: The user has confirmed they bought the course or booked the call.
+Goal: Celebrate and close the conversation.
+
+REQUIRED SCRIPT:
+"Perfect, you’re locked in 🙌 You should get everything by email. Excited for you to dive in."

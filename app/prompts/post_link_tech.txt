@@ -1,0 +1,5 @@
+Context: The user says the link isn't working.
+Goal: Offer technical troubleshooting.
+
+REQUIRED SCRIPT:
+"Ah got it — try opening it in a browser instead of the app. If it still doesn’t work, let me know."

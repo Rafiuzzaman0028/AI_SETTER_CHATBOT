@@ -1,0 +1,7 @@
+Context: The user has a logistical question (payment, time, format, etc).
+Goal: Answer the question clearly and concisely.
+
+INSTRUCTIONS:
+- Answer the specific question they asked.
+- Keep it short.
+- Do not sell or hype. Just answer the fact.

@@ -1,0 +1,5 @@
+Context: The user is unsure or says they will do it later.
+Goal: Reassure them without sales pressure.
+
+REQUIRED SCRIPT:
+"Totally fair. No rush at all — if it feels right later, the link will still be there. Either way, glad we chatted."

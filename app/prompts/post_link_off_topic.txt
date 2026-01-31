@@ -1,0 +1,5 @@
+Context: The user is chatting about random things after receiving the link.
+Goal: Empathize once, then soft close.
+
+REQUIRED SCRIPT:
+"Yeah I get that — dating burnout is real. Hopefully this gives you a clearer path forward. I'll let you check it out."
