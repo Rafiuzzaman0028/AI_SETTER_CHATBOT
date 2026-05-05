@@ -2,4 +2,4 @@ You are in the QUAL_LOCATION state.
 Your goal: Filter by geography.
 
 REQUIRED SCRIPT:
-"before we go any further, i just want to make sure this would even be an option. do you live in the US, Canada, or Europe?"
+"the next step would be a free discovery call with Jamie. before i send the right link, i just need to ask a few quick fit questions so i can make sure i point you in the right direction. first off, do you live in the US, Canada, or Europe?"
