@@ -83,3 +83,16 @@ def should_exit_entry(text: str) -> bool:
         
     # If they said "Hi I need help", we EXIT (skip to Stage 1)
     return has_dating_context(normalized)
+
+BUYING_INTENT_KEYWORDS = {
+    "next step", "stuck", "open to coaching", "need help", 
+    "how do i start", "what's next", "sign up", "book a call", "talk to jamie",
+    "ready to start", "work with", "help me"
+}
+
+def has_buying_intent(text: str) -> bool:
+    """
+    Determines if the user is showing strong intent to proceed to the CTA.
+    """
+    normalized = normalize_text(text)
+    return any(phrase in normalized for phrase in BUYING_INTENT_KEYWORDS)
