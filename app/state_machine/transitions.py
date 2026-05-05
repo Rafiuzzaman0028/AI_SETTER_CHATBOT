@@ -2,7 +2,7 @@
 from typing import Dict, Optional
 from app.state_machine.states import ConversationState
 from app.state_machine.exit_rules import (
-    normalize_text, entry_boundary_action, should_exit_entry
+    normalize_text, entry_boundary_action, should_exit_entry, has_buying_intent
 )
 
 def determine_next_state(
@@ -28,6 +28,18 @@ def determine_next_state(
         return ConversationState.STAGE_1_PATTERN
 
     # --- FUNNEL PHASE ---
+    # Fast-forward to qualification if buying intent is detected during the funnel
+    funnel_states = {
+        ConversationState.STAGE_1_PATTERN, ConversationState.STAGE_2_TIME_COST,
+        ConversationState.STAGE_3_ADDITIONAL, ConversationState.STAGE_4_FAILED_SOLUTIONS,
+        ConversationState.STAGE_5_GOAL, ConversationState.STAGE_6_GAP,
+        ConversationState.STAGE_7_REFRAME, ConversationState.STAGE_8_INTRO_COACHING,
+        ConversationState.STAGE_9_PROGRAM_FRAMING
+    }
+    if current_state in funnel_states:
+        if has_buying_intent(user_message):
+            return ConversationState.STAGE_10_QUAL_LOCATION
+
     if current_state == ConversationState.STAGE_1_PATTERN:
         if turns >= 0: return ConversationState.STAGE_2_TIME_COST # Speed Fix
         return ConversationState.STAGE_1_PATTERN
