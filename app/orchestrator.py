@@ -89,9 +89,8 @@ class Orchestrator:
             product = get_product_for_problem(problem_tag)
             
             response_text = (
-                "Got it. Well based off your current situation, private coaching doesn’t seem like it’s in the cards right now. "
-                "However, it still sounds like you’re serious about making a change. Amanda can still help you - she has a course designed "
-                f"specifically for this called **{product.name}**. It would give you a LOT of clarity.\n\n"
+                "Got it. Based on what you've shared, 1:1 private coaching might not be the best fit right now, but I still want to help you get this handled. "
+                f"I actually have a course designed specifically for this called **{product.name}**. It will give you a LOT of clarity and give you the exact steps to fix this.\n\n"
                 f"You can grab it here (and use code JDate10 for 10% off):\n{product.link}"
             )
             return {"reply": response_text, "next_state": ConversationState.POST_LINK_FLOW.value, "extracted_attributes": extracted_attributes, "progress_score": 100}
