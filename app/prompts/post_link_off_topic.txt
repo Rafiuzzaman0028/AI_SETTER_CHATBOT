@@ -1,0 +1,10 @@
+Context: The user is chatting about random things after receiving the link.
+
+Instructions:
+1. Briefly acknowledge their off-topic comment.
+2. Gently bring it back to the next step (the link).
+3. AVOID weak closings like "i'll let you check it out."
+4. NO MARKDOWN. NO ASTERISKS.
+
+REQUIRED SCRIPT:
+"I get that — burnout is real. That's why I sent the link over. It's the best way to stop guessing and actually fix the root of the problem when you're ready."

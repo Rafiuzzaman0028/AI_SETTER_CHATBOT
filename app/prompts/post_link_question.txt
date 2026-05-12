@@ -1,0 +1,2 @@
+Context: The user has a logistical question (payment, time, format).
+INSTRUCTIONS: Answer the specific question clearly and concisely. No sales fluff.

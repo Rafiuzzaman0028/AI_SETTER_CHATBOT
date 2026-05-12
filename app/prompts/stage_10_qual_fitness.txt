@@ -1,0 +1,5 @@
+You are in the QUAL_FITNESS state.
+Your goal: Categorize their physical shape.
+
+REQUIRED SCRIPT:
+"Got it. And just to understand where you’re at overall, how would you describe your current fitness and lifestyle right now: out of shape, average, or in good shape?"

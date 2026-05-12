@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jamie AI - Client Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .message-enter {
+            animation: slideIn 0.2s ease-out forwards;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 h-screen flex items-center justify-center font-sans">
+
+    <!-- Phone Container -->
+    <div
+        class="w-full max-w-md bg-white h-full md:h-[800px] md:rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
+
+        <!-- Header -->
+        <div class="bg-indigo-600 p-4 text-white flex items-center shadow-md z-10">
+            <div
+                class="w-10 h-10 rounded-full bg-indigo-400 flex items-center justify-center mr-3 border-2 border-white">
+                <span class="font-bold text-lg">J</span>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg">Jamie Date</h1>
+                <p class="text-xs text-indigo-200">AI Setter • Reply time: instant</p>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-container" class="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            <!-- Messages will appear here -->
+            <div class="flex justify-start message-enter">
+            </div>
+        </div>
+        <!-- Typing Indicator (Hidden by default) -->
+        <div id="typing-indicator" class="hidden px-4 py-2 bg-gray-50">
+            <div class="flex items-center space-x-1">
+                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                <div class="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style="animation-delay: 0.4s"></div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 bg-white border-t border-gray-100">
+            <form id="chat-form" class="flex items-center gap-2">
+                <input type="text" id="user-input"
+                    class="flex-1 border border-gray-300 rounded-full px-4 py-3 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-sm"
+                    placeholder="Type a message..." autocomplete="off">
+                <button type="submit"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white rounded-full p-3 transition-colors shadow-md flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    id="send-btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path
+                            d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+                    </svg>
+                </button>
+            </form>
+            <p class="text-center text-xs text-gray-400 mt-2">Jamie AI - Client Demo v1.0</p>
+        </div>
+    </div>
+
+    <script>
+        // --- CLIENT STATE MANAGEMENT ---
+        // Since the backend is stateless, the frontend must hold the state token
+        let currentState = "ENTRY";
+        let userAttributes = {};
+        // const userId = "client_test_" + Math.floor(Math.random() * 100000); // Random ID for unique session
+        // Now, even if you refresh, the bot will remember you.
+        // To clear memory, use the API endpoint: DELETE /clear-history/my_fixed_test_user (or just change the ID when you want a fresh start).
+        const userId = "my_fixed_test_user";
+
+        const chatContainer = document.getElementById('chat-container');
+        const chatForm = document.getElementById('chat-form');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const typingIndicator = document.getElementById('typing-indicator');
+        // Helper: Add Message to UI
+        function addMessage(text, isUser) {
+            const div = document.createElement('div');
+            div.className = `flex ${isUser ? 'justify-end' : 'justify-start'} message-enter`;
+            const bubble = document.createElement('div');
+            bubble.className = isUser
+                ? 'bg-indigo-600 text-white p-3 rounded-2xl rounded-tr-none shadow-md max-w-[80%] text-sm'
+                : 'bg-white text-gray-800 p-3 rounded-2xl rounded-tl-none shadow-sm max-w-[80%] border border-gray-200 text-sm';
+            // Handle links in bot messages
+            if (!isUser) {
+                // Convert URLs to clickable links
+                const urlRegex = /(https?:\/\/[^\s]+)/g;
+                bubble.innerHTML = text.replace(urlRegex, '<a href="$1" target="_blank" class="underline text-indigo-500 hover:text-indigo-700">$1</a>');
+            } else {
+                bubble.textContent = text;
+            }
+            div.appendChild(bubble);
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+        // --- API LOGIC ---
+        chatForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const message = userInput.value.trim();
+            if (!message) return;
+            // 1. Add User Message
+            addMessage(message, true);
+            userInput.value = '';
+            userInput.disabled = true;
+            sendBtn.disabled = true;
+            // 2. Show Typing
+            typingIndicator.classList.remove('hidden');
+            scrollToBottom();
+            try {
+                // 3. Call Backend
+                const response = await fetch('/process-message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: userId,
+                        message: message,
+                        current_state: currentState,
+                        user_attributes: userAttributes
+                    })
+                });
+                if (!response.ok) throw new Error("Network error");
+                const data = await response.json();
+                // 4. Update Client State
+                currentState = data.next_state;
+                if (data.extracted_attributes) {
+                    userAttributes = data.extracted_attributes;
+                }
+                // 5. Hide Typing & Add Bot Message
+                typingIndicator.classList.add('hidden');
+                addMessage(data.reply, false);
+                // 6. Check for END state
+                if (currentState === "END") {
+                    userInput.placeholder = "Conversation ended.";
+                    userInput.disabled = true;
+                    sendBtn.disabled = true;
+                } else {
+                    userInput.disabled = false;
+                    sendBtn.disabled = false;
+                    userInput.focus();
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                typingIndicator.classList.add('hidden');
+                addMessage("⚠️ System Error: Could not connect to JamieBot.", false);
+                userInput.disabled = false;
+                sendBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+
+</html>

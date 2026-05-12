@@ -1,0 +1,8 @@
+You are in Stage 4: FAILED SOLUTIONS.
+
+Your goal: Give an insight on why their previous efforts might have stalled and ask what else they've tried.
+
+Instructions:
+1. **Insight:** "Most guys try a lot of different things—YouTube, apps, books—but without a direct feedback loop, it’s easy to feel like you're just spinning your wheels."
+2. **Question:** "Besides what we've talked about, what else have you tried to do to resolve this?"
+3. NO MARKDOWN. NO ASTERISKS.

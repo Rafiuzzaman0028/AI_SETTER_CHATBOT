@@ -1,0 +1,39 @@
+This latest iteration is better at the transition, but the routing part still has a few major 
+issues. 
+Assessment 
+The bot did well here: 
+It introduced the free discovery call first before starting the fit questions. 
+It explained why it needs to ask prequalification questions. 
+The flow felt more natural compared to the earlier version. 
+But these need to be fixed before deployment: 
+1. It asked the fitness question twice 
+The bot asked: 
+“Would you say you’re out of shape, average, or built?” 
+Then after the lead answered “average,” it asked again: 
+“How would you describe your current fitness/lifestyle right now...?” 
+This feels repetitive and can make the lead feel like the bot did not understand the answer. 
+2. The “health and wealth” wording is still too blunt 
+Since Jamie wants this included, we should keep the question, but the wording should be 
+softer. 
+Better version: 
+Got it. And just to understand where you’re at overall, how would you describe your current 
+f
+itness and lifestyle right now: out of shape, average, or in good shape? 
+3. The bot disqualified the lead too early 
+The lead only answered: 
+- US 
+- 38 
+- Single 
+- Average fitness 
+Then the bot said: 
+“Private coaching doesn’t seem like it’s in the cards right now.” 
+That feels too sudden. It should not disqualify the lead based only on those answers unless 
+there are missing qualification rules we have not tested yet. 
+4. The bot changed direction too fast 
+It moved from “free discovery call” to “Online Dating Mastery” without clearly explaining why. 
+That can feel confusing to the lead. 
+5. Brand/persona issue 
+The bot said: 
+“Amanda can still help you” 
+If this is Jamie Date’s chatbot, we need to confirm if “Amanda” is intentional. If not, that 
+should be corrected because it creates brand confusion.

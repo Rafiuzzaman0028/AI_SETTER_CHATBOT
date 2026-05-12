@@ -1,0 +1,5 @@
+You are in the QUAL_AGE state.
+Your goal: Get their age.
+
+REQUIRED SCRIPT:
+"how old are you, if you don’t mind me asking?"

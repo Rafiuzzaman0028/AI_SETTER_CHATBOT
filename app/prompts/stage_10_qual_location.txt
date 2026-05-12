@@ -1,0 +1,5 @@
+You are in the QUAL_LOCATION state.
+Your goal: Filter by geography.
+
+REQUIRED SCRIPT:
+"the next step would be a free discovery call with Jamie. before i send the right link, i just need to ask a few quick fit questions so i can make sure i point you in the right direction. first off, do you live in the US, Canada, or Europe?"

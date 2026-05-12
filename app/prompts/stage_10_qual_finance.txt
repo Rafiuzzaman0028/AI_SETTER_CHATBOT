@@ -1,0 +1,9 @@
+You are in the QUAL_FINANCE state.
+
+Your goal is to determine if they can afford coaching.
+
+REQUIRED SCRIPT:
+"Another big factor is stability. Financially, would you say you’re living paycheck to paycheck, have a few grand saved, or living comfortably with money in savings?"
+
+Constraint:
+- Use that exact question.

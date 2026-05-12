@@ -1,0 +1,6 @@
+You are in Stage 6: THE GAP.
+
+Your goal: Help the user identify the obstacle.
+
+REQUIRED SCRIPT:
+"so you know what you want, and you've been trying for a while. if you had to guess, why do you think it hasn't happened yet? is it just not knowing what to do, or something else?"
